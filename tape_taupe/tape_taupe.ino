@@ -20,7 +20,7 @@
 
 // Constantes et variables liées au ruban de led
 #define LED_PIN 3
-#define NUM_LEDS 3
+#define NUM_LEDS 24
 CRGB leds[NUM_LEDS];
 
 void set_color(int btn_idx, CRGB color)
@@ -28,12 +28,12 @@ void set_color(int btn_idx, CRGB color)
   leds[btn_idx * 3    ] = color;
   leds[btn_idx * 3 + 1] = color;
   leds[btn_idx * 3 + 2] = color;
+  FastLED.show();
 }
 
 void set_color(int btn_idx, uint8_t r, uint8_t g, uint8_t b)
 {
   set_color(btn_idx, CRGB(r, g, b));
-  FastLED.show();
 }
 
 void init_leds() {
@@ -155,6 +155,7 @@ void init_hardware() {
   init_leds();
   init_buttons();
   init_screen();
+  printf("Hardware initialisé\n");
 }
 
 
@@ -165,14 +166,14 @@ unsigned long started_at{0};
 
 void init_game()
 {
+  printf("Init Game");
   // Compteur de points à 0
   score = 0;
   // Touches réinitialisées
-  for (int btn{0} ; btn<NUM_BUTTONS ; btn++)
+  for (int btn{0} ; btn<NUM_BUTTONS ; btn++) {
     btn_flags[btn] = false;
-  // Leds réinitialisées
-  for (int led{0} ; led<NUM_LEDS ; led++)
-    set_color(led, CRGB::White);
+    set_color(btn, CRGB::White);
+  }
 
   // Attend uun premier appuis pour démarer le jeu
   bool no_push = true;
@@ -183,8 +184,16 @@ void init_game()
   } while (no_push);
   // Enregistre le temps de départ pour laisser 1 minute de jeu
   started_at = millis();
+
+  // Eteint tous les boutons
+  for (int btn{0} ; btn<NUM_BUTTONS ; btn++) {
+    btn_flags[btn] = false;
+    set_color(btn, CRGB::Black);
+  }
+
   // Initialise l'aléatoire en utilisant l'aléatoire du temps de démarrage
   randomSeed(started_at);
+  init_random_btn();
 }
 
 int current_btn{NUM_BUTTONS/2};
@@ -197,6 +206,7 @@ void init_random_btn ()
   // Initialise le bouton
   current_btn = candidate;
   set_color(current_btn, CRGB::White);
+  printf("Init random btn %d\n", current_btn);
 }
 
 bool game_stopped{false};
@@ -206,11 +216,12 @@ void stop_game() {
 
 void game_loop()
 {
+  printf("Game loop\n");
   unsigned long display_sec{10000};
   unsigned long sec{millis() - started_at};
 
   // Initialise le premier bouton
-  while((!game_stopped) || (sec < 60000))
+  while((!game_stopped) && (sec < 60000))
   {
     // Si le bon bouton est pressé
     if (btn_flags[current_btn]) {
@@ -223,11 +234,13 @@ void game_loop()
       btn_flags[btn] = false;
     }
     // Met à jour le timer
+    sec = millis() - started_at;
     if (sec / 1000 != display_sec) {
       display_sec = sec / 1000;
       set_2digit_number(static_cast<uint8_t>(display_sec));
     }
   }
+  printf("Fin de game loop\n");
 }
 
 void end_animation() {
@@ -245,8 +258,18 @@ void end_animation() {
 
 
 void debug_mode() {
+  printf("DEBUG mode\n");
+
+  // Wiring test
   for (int led{0} ; led<NUM_LEDS ; led++)
-    set_color(led, CRGB::Blue);
+    leds[led] = CRGB::Yellow;
+  FastLED.show();
+
+  delay(5000);
+
+  // Low level function test
+  for (int btn{0} ; btn<NUM_BUTTONS ; btn++)
+    set_color(btn, CRGB::Blue);
 
   delay(5000);
 }
@@ -257,6 +280,7 @@ void debug_mode() {
 void setup() {
   init_hardware();
   delay(500);
+  debug_mode();
   init_game();
 }
 
